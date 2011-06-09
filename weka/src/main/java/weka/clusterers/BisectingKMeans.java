@@ -114,6 +114,12 @@ public class BisectingKMeans
 
   public void buildClusterer(Instances data) throws Exception {
       // TODO: implement algorithm here?
+          getCapabilities().testWithFail(data);
+
+        //what is this?
+        //m_ReplaceMissingFilter = new ReplaceMissingValues();
+        Instances instances = new Instances(data);
+
     }
 
     public void setMaxIterations(int n) throws Exception {
@@ -165,7 +171,7 @@ public class BisectingKMeans
     if(!(df instanceof EuclideanDistance) && 
        !(df instanceof ManhattanDistance))
       {
-        throw new Exception("SimpleKMeans currently only supports the Euclidean and Manhattan distances.");
+        throw new Exception("BisectingKMeans currently only supports the Euclidean and Manhattan distances.");
       }
     m_DistanceFunction = df;
   }
@@ -198,6 +204,9 @@ public class BisectingKMeans
     if (optionString.length() != 0) {
       setNumClusters(Integer.parseInt(optionString));
     }
+    
+    String numIterations = Utils.getOption('C', options);
+    m_MaxIterations = Integer.parseInt(numIterations);
 
     optionString = Utils.getOption("I", options);
     if (optionString.length() != 0) {
@@ -244,6 +253,9 @@ public class BisectingKMeans
     result.add("-N");
     result.add("" + getNumClusters());
 
+    result.add("-C");
+    result.add("" + m_MaxIterations);
+
     result.add("-A");
     result.add((m_DistanceFunction.getClass().getName() + " " +
                 Utils.joinOptions(m_DistanceFunction.getOptions())).trim());
@@ -260,6 +272,10 @@ public class BisectingKMeans
       result.add(options[i]);
 
     return (String[]) result.toArray(new String[result.size()]);
+  }
+
+  public static void main (String[] argv) {
+    runClusterer(new BisectingKMeans(), argv);
   }
 
 }
