@@ -22,6 +22,7 @@ import weka.filters.unsupervised.attribute.ReplaceMissingValues;
 
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Random;
 import java.util.Vector;
 
@@ -152,24 +153,113 @@ public class BisectingKMeans
     return result;
   }
 
+  /**
+   * Chooses a cluster to split into two
+   *
+   * @param clusters vector of the clusters to choose from
+   * @param seed seed for the random number generator
+   *
+   * @return the index in the vector of the chosen cluster
+   */
+
+  private int chooseClusterToSplit(Vector<Instances> clusters, int seed) {
+    // TODO: write other ways to choose the cluster
+
+    Random RandomO = new Random(getSeed());
+    return RandomO.nextInt(clusters.size());
+  }
+
   public void buildClusterer(Instances data) throws Exception {
-    // TODO: implement algorithm here?
     getCapabilities().testWithFail(data);
 
-    //what is this?
-    //m_ReplaceMissingFilter = new ReplaceMissingValues();
     Instances instances = new Instances(data);
-  }
 
-  public int numberOfIterations() throws Exception {
-    return m_MaxIterations;
-  }
+    // all the instances are assigned to cluster 0
+    int[] clusterAssignments = new int [instances.numInstances()];
 
-  public void setNumIterations(int n) throws Exception {
-    if (n <= 0) {
-      throw new Exception("Number of clusters must be > 0");
+    if (m_PreserveOrder)
+      m_Assignments = clusterAssignments;
+
+    Random RandomO = new Random(getSeed());
+
+    Vector<Instances> clusters = new Vector<Instances>();
+    clusters.add(instances);
+
+    while (clusters.size() < m_NumClusters){
+      int clusterIndex = chooseClusterToSplit(clusters, RandomO.nextInt());
+      Instances clusterToSplit = clusters.get(clusterIndex);
+      double minimumError = 1.79769313486231570e+308d;  // largest Java number
+      Instances bestFirst = null, bestSecond = null;
+      for (int l = 0; l < m_NumExecutions; l++){
+        // create and configure the K-Means subalgorithm
+        weka.clusterers.SimpleKMeans kMeans = new weka.clusterers.SimpleKMeans();
+        kMeans.setDisplayStdDevs(m_displayStdDevs);
+        kMeans.setDistanceFunction(m_DistanceFunction);
+        kMeans.setDontReplaceMissingValues(m_dontReplaceMissing);
+        kMeans.buildClusterer(clusterToSplit);
+        kMeans.setMaxIterations(m_MaxIterations);
+        kMeans.setNumClusters(2);   // always split into two subclusters
+        kMeans.setPreserveInstancesOrder(m_PreserveOrder);
+        kMeans.setSeed(RandomO.nextInt());
+
+        // execute the subalgorithm
+        Instances first = null, second = null;//KMeans(clusterToSplit);
+        for (int i = 0; i < clusterToSplit.numInstances(); ++i){
+          Instance nextInstance = clusterToSplit.instance(i);
+          if (kMeans.clusterInstance(nextInstance) == 0){
+            first.add(nextInstance);
+          }
+          else {
+            second.add(nextInstance);
+          }
+        }
+        // FIXME: think about supporting other types of error calculating
+        double currentError = kMeans.getSquaredError();
+        if (currentError < minimumError){
+          bestFirst = first;
+          bestSecond = second;
+          minimumError = currentError;
+        }
+      }
+      clusters.set(clusterIndex, bestFirst);
+      clusters.add(bestSecond);
     }
-    m_MaxIterations = n;
+
+    // TODO: Assign the instances to the clusters by number
+  }
+
+  /**
+   * clusters an instance that has been through the filters
+   *
+   * @param instance the instance to assign a cluster to
+   * @param updateErrors if true, update the within clusters sum of errors
+   * @return a cluster number
+   */
+  private int clusterProcessedInstance(Instance instance, boolean updateErrors) {
+  // TODO: write this!
+        return 0;
+  }
+
+  /**
+   * Classifies a given instance.
+   *
+   * @param instance the instance to be assigned to a cluster
+   * @return the number of the assigned cluster as an interger
+   * if the class is enumerated, otherwise the predicted value
+   * @throws Exception if instance could not be classified
+   * successfully
+   */
+  public int clusterInstance(Instance instance) throws Exception {
+    Instance inst = null;
+    if (!m_dontReplaceMissing) {
+      m_ReplaceMissingFilter.input(instance);
+      m_ReplaceMissingFilter.batchFinished();
+      inst = m_ReplaceMissingFilter.output();
+    } else {
+      inst = instance;
+    }
+
+    return clusterProcessedInstance(inst, false);
   }
 
   /**
