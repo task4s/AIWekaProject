@@ -114,6 +114,16 @@ public class BisectingKMeans
   private int m_NumExecutions = 2;
 
   /**
+   * The resulting clusters
+   */
+  private Vector<Instances> m_Clusters;
+
+  /**
+   * A hash map that holds to which cluster an instance belongs
+   */
+  private HashMap<String, Integer> m_ClustersIndices;
+
+  /**
    * the default constructor
    */
   public BisectingKMeans() {
@@ -175,19 +185,20 @@ public class BisectingKMeans
     Instances instances = new Instances(data);
 
     // all the instances are assigned to cluster 0
-    int[] clusterAssignments = new int [instances.numInstances()];
-
-    if (m_PreserveOrder)
-      m_Assignments = clusterAssignments;
+    m_Assignments = new int [instances.numInstances()];
 
     Random RandomO = new Random(getSeed());
 
-    Vector<Instances> clusters = new Vector<Instances>();
-    clusters.add(instances);
+    m_Clusters = new Vector<Instances>();
+    m_Clusters.add(instances);
+    m_ClustersIndices = new HashMap<String, Integer>();
+    for (int i = 0; i < instances.numInstances(); ++i){
+        m_ClustersIndices.put(instances.instance(i).toString(), 0);
+    }
 
-    while (clusters.size() < m_NumClusters){
-      int clusterIndex = chooseClusterToSplit(clusters, RandomO.nextInt());
-      Instances clusterToSplit = clusters.get(clusterIndex);
+    while (m_Clusters.size() < m_NumClusters){
+      int clusterIndex = chooseClusterToSplit(m_Clusters, RandomO.nextInt());
+      Instances clusterToSplit = m_Clusters.get(clusterIndex);
       double minimumError = 1.79769313486231570e+308d;  // largest Java number
       Instances bestFirst = null, bestSecond = null;
       for (int l = 0; l < m_NumExecutions; l++){
@@ -196,14 +207,19 @@ public class BisectingKMeans
         kMeans.setDisplayStdDevs(m_displayStdDevs);
         kMeans.setDistanceFunction(m_DistanceFunction);
         kMeans.setDontReplaceMissingValues(m_dontReplaceMissing);
-        kMeans.buildClusterer(clusterToSplit);
         kMeans.setMaxIterations(m_MaxIterations);
         kMeans.setNumClusters(2);   // always split into two subclusters
         kMeans.setPreserveInstancesOrder(m_PreserveOrder);
         kMeans.setSeed(RandomO.nextInt());
+        kMeans.buildClusterer(clusterToSplit);
 
-        // execute the subalgorithm
-        Instances first = null, second = null;//KMeans(clusterToSplit);
+        // prepare for and execute the subalgorithm
+        // FIXME: there should be a better way to construct these Instances
+        Instances first = new Instances(data);
+        Instances second = new Instances(data);
+        first.delete();
+        second.delete();
+
         for (int i = 0; i < clusterToSplit.numInstances(); ++i){
           Instance nextInstance = clusterToSplit.instance(i);
           if (kMeans.clusterInstance(nextInstance) == 0){
@@ -221,11 +237,19 @@ public class BisectingKMeans
           minimumError = currentError;
         }
       }
-      clusters.set(clusterIndex, bestFirst);
-      clusters.add(bestSecond);
+      m_Clusters.set(clusterIndex, bestFirst);
+      m_Clusters.add(bestSecond);
+      for (int l = 0; l < bestFirst.numInstances(); ++l){
+          m_ClustersIndices.put(bestFirst.instance(l).toString(), clusterIndex);
+      }
+      for (int l = 0; l < bestSecond.numInstances(); ++l){
+          m_ClustersIndices.put(bestSecond.instance(l).toString(), m_Clusters.size() - 1);
+      }
     }
 
-    // TODO: Assign the instances to the clusters by number
+    for (int i = 0; i < instances.numInstances(); ++i){
+        m_Assignments[i] = m_ClustersIndices.get(instances.instance(i).toString());
+    }
   }
 
   /**
@@ -656,6 +680,27 @@ public class BisectingKMeans
       result.add(options[i]);
 
     return (String[]) result.toArray(new String[result.size()]);
+  }
+
+  /**
+   * return a string describing this clusterer
+   *
+   * @return a description of the clusterer as a string
+   */
+  public String toString()
+  {
+        String resultString = new String();
+        resultString = resultString.concat(" Number of clusters: ");
+        resultString = resultString.concat(m_NumClusters + "\n");
+        for (int i = 0; i < m_NumClusters; i++){
+            resultString = resultString.concat("Cluster # " + i + " contains the following instances: \n");
+            for( int j = 0; j< m_Clusters.get(i).numInstances(); j++){
+                resultString = resultString.concat(m_Clusters.get(i).instance(j).toString());
+                resultString = resultString.concat("\n");
+            }
+            resultString = resultString.concat("=======================================\n");
+        }
+        return resultString;
   }
 
   /**
