@@ -124,6 +124,11 @@ public class BisectingKMeans
   private HashMap<String, Integer> m_ClustersIndices;
 
   /**
+   * The possible ways to choose the cluster to split
+   */
+  private int m_wayToChooseClusterToSplit = 3;
+
+  /**
    * the default constructor
    */
   public BisectingKMeans() {
@@ -139,8 +144,8 @@ public class BisectingKMeans
    * displaying in the explorer/experimenter gui
    */
   public String globalInfo() {
-    return "Cluster data using the k means algorithm. Can use either "
-      + "the Euclidean distance (default) or the Manhattan distance."
+    return "Cluster data using the bisecting k means algorithm; Can use either "
+      + "the Euclidean distance (default) or the Manhattan distance;"
       + " If the Manhattan distance is used, then centroids are computed "
       + "as the component-wise median rather than mean.";
   }
@@ -172,11 +177,30 @@ public class BisectingKMeans
    * @return the index in the vector of the chosen cluster
    */
 
-  private int chooseClusterToSplit(Vector<Instances> clusters, int seed) {
-    // TODO: write other ways to choose the cluster
+  private int chooseClusterToSplit(Vector<Instances> clusters, int seed) throws Exception {
+    int clusterToSplit = 0;
+    switch (m_wayToChooseClusterToSplit){
+      case 1:   // Random
+        Random RandomO = new Random(getSeed());
+        clusterToSplit = RandomO.nextInt(clusters.size());
+        break;
+      case 2:   // With highest count of instances
+        int maxInstances = clusters.get(0).numInstances();
+        for (int i = 1; i < clusters.size(); ++i){
+          if (maxInstances < clusters.get(i).numInstances()){
+            clusterToSplit = i;
+            maxInstances = clusters.get(i).numInstances();
+          }
+        }
+        break;
+      case 3:   // With highest squared error
+        // TODO: write this
+        break;
+      default:
+        throw new Exception("BisectingKMeans currently only supports 3 ways to choose a cluster to split. Check the tooltip for description");
+    }
 
-    Random RandomO = new Random(getSeed());
-    return RandomO.nextInt(clusters.size());
+    return clusterToSplit;
   }
 
   public void buildClusterer(Instances data) throws Exception {
@@ -188,6 +212,7 @@ public class BisectingKMeans
     m_Assignments = new int [instances.numInstances()];
 
     Random RandomO = new Random(getSeed());
+    m_ClusterSizes = new int[m_NumClusters];
 
     m_Clusters = new Vector<Instances>();
     m_Clusters.add(instances);
@@ -213,28 +238,28 @@ public class BisectingKMeans
         kMeans.setSeed(RandomO.nextInt());
         kMeans.buildClusterer(clusterToSplit);
 
-        // prepare for and execute the subalgorithm
+        // prepare for and execution of the subalgorithm
         // FIXME: there should be a better way to construct these Instances
         Instances first = new Instances(data);
         Instances second = new Instances(data);
         first.delete();
         second.delete();
 
-        for (int i = 0; i < clusterToSplit.numInstances(); ++i){
-          Instance nextInstance = clusterToSplit.instance(i);
-          if (kMeans.clusterInstance(nextInstance) == 0){
-            first.add(nextInstance);
-          }
-          else {
-            second.add(nextInstance);
-          }
-        }
         // FIXME: think about supporting other types of error calculating
         double currentError = kMeans.getSquaredError();
         if (currentError < minimumError){
+          for (int i = 0; i < clusterToSplit.numInstances(); ++i){
+            Instance nextInstance = clusterToSplit.instance(i);
+            if (kMeans.clusterInstance(nextInstance) == 0){
+              first.add(nextInstance);
+            }
+            else {
+              second.add(nextInstance);
+            }
+          }
+          minimumError = currentError;
           bestFirst = first;
           bestSecond = second;
-          minimumError = currentError;
         }
       }
       m_Clusters.set(clusterIndex, bestFirst);
@@ -247,8 +272,14 @@ public class BisectingKMeans
       }
     }
 
+    // set the indices of respective clusters for each instance
     for (int i = 0; i < instances.numInstances(); ++i){
         m_Assignments[i] = m_ClustersIndices.get(instances.instance(i).toString());
+    }
+
+    // set the sizes of each cluster
+    for (int i = 0; i < m_NumClusters; ++i){
+        m_ClusterSizes[i] = m_Clusters.get(i).numInstances();
     }
   }
 
@@ -505,6 +536,42 @@ public class BisectingKMeans
   }
 
   /**
+   * Returns the tip text for this property
+   * @return tip text for this property suitable for
+   * displaying in the explorer/experimenter gui
+   */
+  public String wayToChooseClusterToSplitTipText() {
+    return "Way to choose the cluster to split:" +
+           " 1 = Random;" +
+           " 2 = With highest count of instances;" +
+           " 3 = With highest squared error";
+  }
+
+  /**
+   * Sets the chosen way to choose the cluster to split
+   *
+   * @param w the way to choose the cluster to split
+   * look at the tooltip for description
+   */
+  public void setWayToChooseClusterToSplit(int w) throws Exception {
+    if ((w <= 0) || (w > 3))
+    {
+      throw new Exception("BisectingKMeans currently only supports 3 ways to choose a cluster to split. Check the tooltip for description");
+    }
+    m_wayToChooseClusterToSplit = w;
+  }
+
+  /**
+   * Gets the chosen way to choose the cluster to split
+   *
+   * @return w the way to choose the cluster to split
+   * look at the tooltip for description
+   */
+  public int getWayToChooseClusterToSplit() {
+    return m_wayToChooseClusterToSplit;
+  }
+
+  /**
    * Returns the number of clusters.
    *
    * @return the number of clusters generated for a training dataset.
@@ -519,7 +586,7 @@ public class BisectingKMeans
     Vector result = new Vector();
 
     result.addElement(new Option(
-                                 "\tTsonkov Cholakov.\n"
+                                 "\tnumber of clusters.\n"
                                  + "\t(default 2).",
                                  "N", 1, "-N <num>"));
     result.addElement(new Option(
@@ -541,6 +608,14 @@ public class BisectingKMeans
     result.addElement(new Option(
                                  "\tPreserve order of instances.\n",
                                  "O", 0, "-O"));
+
+    result.addElement(new Option(
+                                 "\tNumber of executions of the K-means subalgorithm.\n",
+                                 "X", 1, "-X"));
+
+    result.addElement(new Option(
+                                 "\tWay to choose the cluster to split.\n",
+                                 "W", 1, "-W"));
 
     Enumeration en = super.listOptions();
     while (en.hasMoreElements())
@@ -589,6 +664,10 @@ public class BisectingKMeans
    *  Number of executions of the K-means subalgorithm at each splitting.
    * </pre>
    *
+   * <pre> -W
+   *  Way to choose the cluster to split.
+   * </pre>
+   *
    <!-- options-end -->
    *
    * @param options the list of options as an array of strings
@@ -614,6 +693,11 @@ public class BisectingKMeans
     optionString = Utils.getOption("X", options);
     if (optionString.length() != 0) {
       setNumExecutions(Integer.parseInt(optionString));
+    }
+
+    optionString = Utils.getOption("W", options);
+    if (optionString.length() != 0) {
+      setWayToChooseClusterToSplit(Integer.parseInt(optionString));
     }
 
     String distFunctionClass = Utils.getOption('A', options);
@@ -670,6 +754,9 @@ public class BisectingKMeans
 
     result.add("-X");
     result.add(""+ getNumExecutions());
+
+    result.add("-В");
+    result.add(""+ getWayToChooseClusterToSplit());
 
     if(m_PreserveOrder){
       result.add("-O");
