@@ -87,7 +87,22 @@ public String[] getOptions() {
     if (getInvertSelection())
       result.add("-V");
 
+    //result.
     return result.toArray(new String[result.size()]);
+  }
+
+  public void setOptions(String[] options) throws Exception {
+    String	tmpStr;
+
+    setDontNormalize(Utils.getFlag('D', options));
+
+    tmpStr = Utils.getOption('R', options);
+    if (tmpStr.length() != 0)
+      setAttributeIndices(tmpStr);
+    else
+      setAttributeIndices("first-last");
+
+    setInvertSelection(Utils.getFlag('V', options));
   }
 
 

@@ -26,6 +26,7 @@ import weka.core.Attribute;
 import weka.core.Capabilities;
 import weka.core.DistanceFunction;
 import weka.core.EuclideanDistance;
+import weka.core.KPrototypes_DistanceFunction;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.ManhattanDistance;
@@ -706,9 +707,10 @@ public class SimpleKMeans
    */
   public void setDistanceFunction(DistanceFunction df) throws Exception {
     if(!(df instanceof EuclideanDistance) && 
-       !(df instanceof ManhattanDistance))
+       !(df instanceof ManhattanDistance) &&
+       !(df instanceof KPrototypes_DistanceFunction))
       {
-        throw new Exception("SimpleKMeans currently only supports the Euclidean and Manhattan distances.");
+        throw new Exception("SimpleKMeans currently only supports the Euclidean, Manhattan and KPrototypes distances.");
       }
     m_DistanceFunction = df;
   }	
