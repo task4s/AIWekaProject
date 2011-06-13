@@ -24,7 +24,7 @@ public class KPrototypes_DistanceFunction extends NormalizableDistance
 
   public KPrototypes_DistanceFunction() {
     super();
-    this.gamma = 0;
+    this.gamma = 0.5;
   }
 
   public KPrototypes_DistanceFunction(Instances data, double gamma) {
@@ -87,6 +87,7 @@ public String[] getOptions() {
     if (getInvertSelection())
       result.add("-V");
 
+    result.add("-G");
     //result.
     return result.toArray(new String[result.size()]);
   }
@@ -102,6 +103,11 @@ public String[] getOptions() {
     else
       setAttributeIndices("first-last");
 
+    tmpStr = Utils.getOption('G', options);
+    if (tmpStr.length()> 0){
+        gamma = Integer.parseInt(tmpStr);
+    }
+    
     setInvertSelection(Utils.getFlag('V', options));
   }
 
