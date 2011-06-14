@@ -299,4 +299,10 @@ extends RandomizableClusterer
         return vals;
     }
     //end HelperFunctions
+
+    //GUI
+    public String toString() {
+        return "Finished";
+    }
+    //end GUI
 }
