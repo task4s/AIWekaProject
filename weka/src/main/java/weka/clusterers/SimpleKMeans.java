@@ -1185,12 +1185,21 @@ public class SimpleKMeans
   }
 
   /**
-   * Gets the the cluster centroids
+   * Gets the cluster centroids
    * 
    * @return		the cluster centroids
    */
   public Instances getClusterCentroids() {
     return m_ClusterCentroids;
+  }
+
+  /**
+   * Gets the cluster errors
+   *
+   * @return		the cluster errors
+   */
+  public double[] getClusterErrors() {
+    return m_squaredErrors;
   }
 
   /**

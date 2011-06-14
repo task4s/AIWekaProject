@@ -12,6 +12,7 @@ import weka.core.EuclideanDistance;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.ManhattanDistance;
+import weka.core.KPrototypes_DistanceFunction;
 import weka.core.Option;
 import weka.core.RevisionUtils;
 import weka.core.Utils;
@@ -91,9 +92,9 @@ public class BisectingKMeans
   private int m_MaxIterations = 500;
 
   /**
-   * Holds the squared errors for all clusters
+   * Holds the errors for all clusters
    */
-  private double [] m_squaredErrors;
+  private double [] m_ClusterErrors;
 
   /** the distance function used. */
   protected DistanceFunction m_DistanceFunction = new EuclideanDistance();
@@ -119,9 +120,14 @@ public class BisectingKMeans
   private Vector<Instances> m_Clusters;
 
   /**
+   * The cluster centroids
+   */
+  private Instance[] m_ClusterCentroids;
+
+  /**
    * A hash map that holds to which cluster an instance belongs
    */
-  private HashMap<String, Integer> m_ClustersIndices;
+  private HashMap<String, Integer> m_ClusterIndices;
 
   /**
    * The possible ways to choose the cluster to split
@@ -177,30 +183,36 @@ public class BisectingKMeans
    * @return the index in the vector of the chosen cluster
    */
 
-  private int chooseClusterToSplit(Vector<Instances> clusters, int seed) throws Exception {
-    int clusterToSplit = 0;
+  private int chooseClusterToSplit(int seed) throws Exception {
+    int clusterIndex = 0;
     switch (m_wayToChooseClusterToSplit){
       case 1:   // Random
         Random RandomO = new Random(getSeed());
-        clusterToSplit = RandomO.nextInt(clusters.size());
+        clusterIndex = RandomO.nextInt(m_Clusters.size());
         break;
       case 2:   // With highest count of instances
-        int maxInstances = clusters.get(0).numInstances();
-        for (int i = 1; i < clusters.size(); ++i){
-          if (maxInstances < clusters.get(i).numInstances()){
-            clusterToSplit = i;
-            maxInstances = clusters.get(i).numInstances();
+        int maxInstances = 0;
+        for (int i = 0; i < m_Clusters.size(); ++i){
+          if (maxInstances < m_Clusters.get(i).numInstances()){
+            clusterIndex = i;
+            maxInstances = m_Clusters.get(i).numInstances();
           }
         }
         break;
-      case 3:   // With highest squared error
-        // TODO: write this
+      case 3:   // With highest error
+        double highest_error = -1;
+        for (int i = 0; i < m_Clusters.size(); ++i){
+          if (highest_error < m_ClusterErrors[i]){
+            highest_error = m_ClusterErrors[i];
+            clusterIndex = i;
+          }
+        }
         break;
       default:
         throw new Exception("BisectingKMeans currently only supports 3 ways to choose a cluster to split. Check the tooltip for description");
     }
 
-    return clusterToSplit;
+    return clusterIndex;
   }
 
   public void buildClusterer(Instances data) throws Exception {
@@ -210,22 +222,26 @@ public class BisectingKMeans
 
     // all the instances are assigned to cluster 0
     m_Assignments = new int [instances.numInstances()];
+    m_ClusterCentroids = new Instance[m_NumClusters];
+    m_ClusterErrors = new double[m_NumClusters];
 
     Random RandomO = new Random(getSeed());
     m_ClusterSizes = new int[m_NumClusters];
 
     m_Clusters = new Vector<Instances>();
     m_Clusters.add(instances);
-    m_ClustersIndices = new HashMap<String, Integer>();
+    m_ClusterIndices = new HashMap<String, Integer>();
     for (int i = 0; i < instances.numInstances(); ++i){
-        m_ClustersIndices.put(instances.instance(i).toString(), 0);
+        m_ClusterIndices.put(instances.instance(i).toString(), 0);
     }
 
     while (m_Clusters.size() < m_NumClusters){
-      int clusterIndex = chooseClusterToSplit(m_Clusters, RandomO.nextInt());
+      int clusterIndex = chooseClusterToSplit(RandomO.nextInt());
       Instances clusterToSplit = m_Clusters.get(clusterIndex);
       double minimumError = 1.79769313486231570e+308d;  // largest Java number
-      Instances bestFirst = null, bestSecond = null;
+      Instances first = new Instances(data, 0), second = new Instances(data, 0);
+      Instance firstCentroid = null, secondCentroid = null;
+      double firstError = 0, secondError = 0;
       for (int l = 0; l < m_NumExecutions; l++){
         // create and configure the K-Means subalgorithm
         weka.clusterers.SimpleKMeans kMeans = new weka.clusterers.SimpleKMeans();
@@ -238,16 +254,12 @@ public class BisectingKMeans
         kMeans.setSeed(RandomO.nextInt());
         kMeans.buildClusterer(clusterToSplit);
 
-        // prepare for and execution of the subalgorithm
-        // FIXME: there should be a better way to construct these Instances
-        Instances first = new Instances(data);
-        Instances second = new Instances(data);
-        first.delete();
-        second.delete();
-
         // FIXME: think about supporting other types of error calculating
         double currentError = kMeans.getSquaredError();
         if (currentError < minimumError){
+          // update the set of clusters with the new clusters
+          first.delete();
+          second.delete();
           for (int i = 0; i < clusterToSplit.numInstances(); ++i){
             Instance nextInstance = clusterToSplit.instance(i);
             if (kMeans.clusterInstance(nextInstance) == 0){
@@ -257,24 +269,33 @@ public class BisectingKMeans
               second.add(nextInstance);
             }
           }
+          firstCentroid = kMeans.getClusterCentroids().instance(0);
+          secondCentroid = kMeans.getClusterCentroids().instance(l);
+          firstError = kMeans.getClusterErrors()[0];
+          secondError = kMeans.getClusterErrors()[1];
           minimumError = currentError;
-          bestFirst = first;
-          bestSecond = second;
         }
       }
-      m_Clusters.set(clusterIndex, bestFirst);
-      m_Clusters.add(bestSecond);
-      for (int l = 0; l < bestFirst.numInstances(); ++l){
-          m_ClustersIndices.put(bestFirst.instance(l).toString(), clusterIndex);
+      // update the set of clusters with the new clusters
+      m_Clusters.set(clusterIndex, first);
+      m_Clusters.add(second);
+      // mark the instances of the split cluster as belonging to one of the two new clusters
+      for (int l = 0; l < first.numInstances(); ++l){
+          m_ClusterIndices.put(first.instance(l).toString(), clusterIndex);
       }
-      for (int l = 0; l < bestSecond.numInstances(); ++l){
-          m_ClustersIndices.put(bestSecond.instance(l).toString(), m_Clusters.size() - 1);
+      for (int l = 0; l < second.numInstances(); ++l){
+          m_ClusterIndices.put(second.instance(l).toString(), m_Clusters.size() - 1);
       }
+      // update the centroids and errors of the new clusters
+      m_ClusterCentroids[clusterIndex] = firstCentroid;
+      m_ClusterCentroids[m_Clusters.size() - 1] = secondCentroid;
+      m_ClusterErrors[clusterIndex] = firstError;
+      m_ClusterErrors[m_Clusters.size() - 1] = secondError;
     }
 
     // set the indices of respective clusters for each instance
     for (int i = 0; i < instances.numInstances(); ++i){
-        m_Assignments[i] = m_ClustersIndices.get(instances.instance(i).toString());
+        m_Assignments[i] = m_ClusterIndices.get(instances.instance(i).toString());
     }
 
     // set the sizes of each cluster
@@ -499,9 +520,10 @@ public class BisectingKMeans
    */
   public void setDistanceFunction(DistanceFunction df) throws Exception {
     if(!(df instanceof EuclideanDistance) &&
-       !(df instanceof ManhattanDistance))
+       !(df instanceof ManhattanDistance) &&
+       !(df instanceof KPrototypes_DistanceFunction))
       {
-        throw new Exception("BisectingKMeans currently only supports the Euclidean and Manhattan distances.");
+        throw new Exception("BisectingKMeans currently only supports the Euclidean, Manhattan and KPrototypes distances.");
       }
     m_DistanceFunction = df;
   }
@@ -544,7 +566,7 @@ public class BisectingKMeans
     return "Way to choose the cluster to split:" +
            " 1 = Random;" +
            " 2 = With highest count of instances;" +
-           " 3 = With highest squared error";
+           " 3 = With highest error";
   }
 
   /**
@@ -791,6 +813,24 @@ public class BisectingKMeans
   }
 
   /**
+   * Gets the  cluster centroids
+   *
+   * @return		the cluster centroids
+   */
+  public Instance[] getClusterCentroids() {
+    return m_ClusterCentroids;
+  }
+
+  /**
+   * Gets the cluster errors
+   *
+   * @return		the cluster errors
+   */
+  public double[] getClusterErrors() {
+    return m_ClusterErrors;
+  }
+
+  /**
    * Gets the standard deviations of the numeric attributes in each cluster
    *
    * @return		the standard deviations of the numeric attributes
@@ -811,12 +851,12 @@ public class BisectingKMeans
   }
 
   /**
-   * Gets the squared error for all clusters
+   * Gets the error for all clusters
    *
-   * @return		the squared error
+   * @return		the error
    */
-  public double getSquaredError() {
-    return Utils.sum(m_squaredErrors);
+  public double getErrors() {
+    return Utils.sum(m_ClusterErrors);
   }
 
   /**
