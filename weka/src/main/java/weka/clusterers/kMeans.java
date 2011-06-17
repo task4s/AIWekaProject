@@ -161,7 +161,7 @@ extends RandomizableClusterer
         result.addElement(new Option(
                                  "\tNumber of clusters.\n"
                                  + "\t(default 2).",
-                                 "K", 1, "-K <num>"));
+                                 "N", 1, "-N <num>"));
         result.add(new Option(
                             "\tMaximum number of iterations.\n",
                             "I",1,"-I <num>"));
@@ -174,7 +174,7 @@ extends RandomizableClusterer
     }
 
     public void setOptions(String[] options) throws Exception {
-            String optionString = Utils.getOption('K', options);
+            String optionString = Utils.getOption('N', options);
 
         if (optionString.length() != 0) {
             setNumClusters(Integer.parseInt(optionString));
@@ -259,7 +259,9 @@ extends RandomizableClusterer
     public int getMaxIterations() {
         return m_maxIterations;
     }
-
+    public int getNumClusters() {
+        return m_numClusters;
+    }
     private double[] recalcCenters(Instances members) throws Exception {
         double [] vals = new double[members.numAttributes()];
 
@@ -304,5 +306,23 @@ extends RandomizableClusterer
     public String toString() {
         return "Finished";
     }
+
+    //GUI Info
+    public String globalInfo() {
+        return "Basic kMeans algorithm for clustering data, containing numeric only values.";
+    }
+
+    public String numClustersTipText() {
+        return "Set the number of clusters required.";
+    }
+
+    public String maxIterationsTipText() {
+        return "Set maximum number of algorithm cycle iterations.";
+    }
+    //end GUI Info
     //end GUI
+
+    public static void main (String[] argv) {
+        runClusterer(new kMeans(), argv);
+    }
 }
