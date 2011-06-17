@@ -28,6 +28,7 @@ import weka.filters.unsupervised.attribute.ReplaceMissingValues;
 import java.util.Vector;
 import java.util.Enumeration;
 import java.util.Random;
+import java.util.HashMap;
 
 public class kMeans
 extends RandomizableClusterer
@@ -40,6 +41,7 @@ extends RandomizableClusterer
     private Instances m_clusterCenters;
     private Instances[] m_clusterDistribution;
     private int[] m_previousAssignment;
+    private boolean m_dontReplaceMissing = false;
     //end of Private Members
 
     //Constructors
@@ -58,14 +60,28 @@ extends RandomizableClusterer
         Random rand = new Random(getSeed());
 
         m_clusterCenters = new Instances(data, m_numClusters);
+        
         Instances inst = new Instances(data);
-        int count = inst.numInstances();
-        for(int i = 0; i < m_numClusters; i++) {
-            int clusterIndex = rand.nextInt(count-i);
-            m_clusterCenters.add(inst.instance(clusterIndex));
-            inst.delete(clusterIndex);
+        int count = inst.numInstances()-1;
+
+        int clusterIndex;
+        HashMap initC = new HashMap();
+        DecisionTableHashKey hk = null;
+
+        for (int j = count; j >= 0; j--) {
+            clusterIndex = rand.nextInt(j+1);
+            hk = new DecisionTableHashKey(inst.instance(clusterIndex),
+                                    inst.numAttributes(), true);
+            if (!initC.containsKey(hk)) {
+                m_clusterCenters.add(inst.instance(clusterIndex));
+                initC.put(hk, null);
+            }
+            inst.swap(j, clusterIndex);
+
+            if (m_clusterCenters.numInstances() == m_numClusters) {
+                break;
+            }
         }
-        inst = null;
 
         boolean finished = false;
         m_currentIteration = 0;
@@ -76,7 +92,6 @@ extends RandomizableClusterer
         while(!finished) {
             finished = true;
             m_currentIteration++;
-
 
             for(int i = 0; i < inst.numInstances(); i++) {
                 Instance next = inst.instance(i);
@@ -159,6 +174,10 @@ extends RandomizableClusterer
         Vector result = new Vector();
 
         result.addElement(new Option(
+                                 "\tReplace missing values with mean/mode.\n",
+                                 "M", 0, "-M"));
+
+        result.addElement(new Option(
                                  "\tNumber of clusters.\n"
                                  + "\t(default 2).",
                                  "N", 1, "-N <num>"));
@@ -174,7 +193,9 @@ extends RandomizableClusterer
     }
 
     public void setOptions(String[] options) throws Exception {
-            String optionString = Utils.getOption('N', options);
+        m_dontReplaceMissing = Utils.getFlag("M", options);
+
+        String optionString = Utils.getOption('N', options);
 
         if (optionString.length() != 0) {
             setNumClusters(Integer.parseInt(optionString));
@@ -213,6 +234,10 @@ extends RandomizableClusterer
         int i;
         Vector result = new Vector();
         String[] options;
+
+        if (m_dontReplaceMissing) {
+            result.add("-M");
+        }
 
         result.add("-N");
         result.add(""+ numberOfClusters());
@@ -318,6 +343,10 @@ extends RandomizableClusterer
 
     public String maxIterationsTipText() {
         return "Set maximum number of algorithm cycle iterations.";
+    }
+
+    public String dontReplaceMissingValuesTipText() {
+        return "Replace missing values globally with mean/mode.";
     }
     //end GUI Info
     //end GUI
