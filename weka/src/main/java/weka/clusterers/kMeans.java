@@ -60,8 +60,9 @@ extends RandomizableClusterer
         Random rand = new Random(getSeed());
 
         m_clusterCenters = new Instances(data, m_numClusters);
-        
+
         Instances inst = new Instances(data);
+        m_distanceFunction.setInstances(inst);
         int count = inst.numInstances()-1;
 
         int clusterIndex;
@@ -86,7 +87,7 @@ extends RandomizableClusterer
         boolean finished = false;
         m_currentIteration = 0;
         m_clusterDistribution = new Instances[m_numClusters];
-        m_previousAssignment = new int[m_numClusters];
+        m_previousAssignment = new int[count+1];
         int emptyClustCount = 0;
 
         while(!finished) {
@@ -103,6 +104,9 @@ extends RandomizableClusterer
             }
 
             if(!finished) {
+                for (int i = 0; i < m_numClusters; i++) {
+                    m_clusterDistribution[i] = new Instances(inst, 0);
+                }
                 //update Clusters logic
                 for(int i = 0; i < inst.numInstances(); i++) {
                     m_clusterDistribution[m_previousAssignment[i]].add(inst.instance(i));
