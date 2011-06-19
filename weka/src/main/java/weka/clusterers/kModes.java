@@ -30,7 +30,7 @@ import java.util.Enumeration;
 import java.util.Random;
 import java.util.HashMap;
 
-public class kMeans
+public class kModes
 extends RandomizableClusterer
   implements NumberOfClustersRequestable, WeightedInstancesHandler, OptionHandler, CapabilitiesHandler {
     //Private Members
@@ -46,7 +46,7 @@ extends RandomizableClusterer
     //end of Private Members
 
     //Constructors
-    public kMeans() {
+    public kModes() {
         m_numClusters = 2;
         m_maxIterations = 100;
         m_distanceFunction = new EuclideanDistance();
@@ -103,6 +103,8 @@ extends RandomizableClusterer
 
             for(int i = 0; i < inst.numInstances(); i++) {
                 Instance next = inst.instance(i);
+                if (next == null)
+                    continue;
                 int newClust = clusterInstance(next);
                 if(newClust != m_previousAssignment[i]) {
                     m_previousAssignment[i] = newClust;
@@ -134,6 +136,8 @@ extends RandomizableClusterer
                     int index = 0;
 
                     for (int k = 0; k < m_clusterDistribution.length; k++) {
+                        if (m_clusterDistribution[k] == null)
+                            continue;
                         if (m_clusterDistribution[k].numInstances() > 0) {
                             newClusterDistribution[index++] = m_clusterDistribution[k];
                         }
@@ -149,12 +153,14 @@ extends RandomizableClusterer
                 finished = true;
         }
     }
-    
+
     public int clusterInstance(Instance instance) throws Exception {
         double minDist = m_distanceFunction.distance(instance, m_clusterCenters.instance(0));
         int retValue = 0;
 
         for (int i = 1; i < m_numClusters; i++) {
+            if (m_clusterCenters.instance(i) == null)
+                continue;
             double dist = m_distanceFunction.distance(instance, m_clusterCenters.instance(i));
             if (dist < minDist) {
                 minDist = dist;
@@ -275,10 +281,10 @@ extends RandomizableClusterer
 
         //class
         result.enable(Capability.NO_CLASS);
-        result.enable(Capability.NUMERIC_CLASS);
+        result.enable(Capability.NOMINAL_CLASS);
 
         // attributes
-        result.enable(Capability.NUMERIC_ATTRIBUTES);
+        result.enable(Capability.NOMINAL_ATTRIBUTES);
         result.enable(Capability.MISSING_VALUES);
 
         return result;
@@ -345,7 +351,7 @@ extends RandomizableClusterer
 
     //GUI Info
     public String globalInfo() {
-        return "Basic kMeans algorithm for clustering data, containing numeric only values.";
+        return "Basic kModes algorithm for clustering data, containing numeric only values.";
     }
 
     public String numClustersTipText() {
@@ -363,6 +369,6 @@ extends RandomizableClusterer
     //end GUI
 
     public static void main (String[] argv) {
-        runClusterer(new kMeans(), argv);
+        runClusterer(new kModes(), argv);
     }
 }

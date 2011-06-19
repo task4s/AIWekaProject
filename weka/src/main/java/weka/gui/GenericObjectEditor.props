@@ -246,6 +246,7 @@ weka.clusterers.Clusterer=\
  weka.clusterers.SimpleKMeans,\
  weka.clusterers.BisectingKMeans,\
  weka.clusterers.kMeans, \
+ weka.clusterers.kModes, \
  weka.clusterers.XMeans
  
 # Lists the UnsupervisedFilters I want to choose from
