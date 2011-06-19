@@ -13,6 +13,7 @@ import weka.core.Capabilities.Capability;
 import weka.core.DistanceFunction;
 import weka.core.EuclideanDistance;
 import weka.core.ManhattanDistance;
+import weka.core.KPrototypes_DistanceFunction;
 import weka.core.Instance;
 import weka.core.Instances;
 
@@ -340,7 +341,26 @@ extends RandomizableClusterer
 
     //GUI
     public String toString() {
-        return "Finished";
+          String resultString = new String();
+        resultString = resultString.concat("Number of clusters: ");
+        resultString = resultString.concat(m_numClusters + "\n");
+        resultString = resultString.concat("\n Cluster centroids:\n");
+        for (int i = 0; i < m_numClusters; ++i){
+            resultString = resultString.concat("Cluster " + i + " centroid: ");
+            resultString = resultString.concat(m_clusterCenters.instance(i).toString() + "\n");
+        }
+      
+        resultString = resultString.concat("\n");
+        for (int i = 0; i < m_numClusters; i++){
+            resultString = resultString.concat("Cluster " + i + " contains the following instances: \n");
+            for( int j = 0; j< m_clusterDistribution[i].numInstances(); j++){
+                resultString = resultString.concat(m_clusterDistribution[i].instance(j).toString());
+                resultString = resultString.concat("\n");
+            }
+            resultString = resultString.concat("=======================================\n");
+        }
+        resultString = resultString.concat("\n");
+        return resultString;
     }
 
     //GUI Info
