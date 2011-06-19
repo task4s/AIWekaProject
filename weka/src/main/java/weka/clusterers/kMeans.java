@@ -13,7 +13,6 @@ import weka.core.Capabilities.Capability;
 import weka.core.DistanceFunction;
 import weka.core.EuclideanDistance;
 import weka.core.ManhattanDistance;
-import weka.core.KPrototypes_DistanceFunction;
 import weka.core.Instance;
 import weka.core.Instances;
 
@@ -44,6 +43,7 @@ extends RandomizableClusterer
     private int[] m_previousAssignment;
     private boolean m_dontReplaceMissing = false;
     private ReplaceMissingValues m_ReplaceMissingFilter;
+    private double[] m_clusterErrors;
     //end of Private Members
 
     //Constructors
@@ -97,6 +97,7 @@ extends RandomizableClusterer
         m_clusterDistribution = new Instances[m_numClusters];
         m_previousAssignment = new int[count+1];
         int emptyClustCount = 0;
+        m_clusterErrors = new double[m_numClusters];
 
         while(!finished) {
             finished = true;
@@ -104,7 +105,7 @@ extends RandomizableClusterer
 
             for(int i = 0; i < inst.numInstances(); i++) {
                 Instance next = inst.instance(i);
-                int newClust = clusterInstance(next);
+                int newClust = clusterFilteredInstance(next, true);
                 if(newClust != m_previousAssignment[i]) {
                     m_previousAssignment[i] = newClust;
                     finished = false;
@@ -146,12 +147,29 @@ extends RandomizableClusterer
                 }
             }
 
+            if(!finished) {
+                m_clusterErrors = new double[m_numClusters];
+            }
+
             if(m_currentIteration == m_maxIterations)
                 finished = true;
         }
     }
     
     public int clusterInstance(Instance instance) throws Exception {
+        Instance toCluster = null;
+        if (!m_dontReplaceMissing) {
+            m_ReplaceMissingFilter.input(instance);
+            m_ReplaceMissingFilter.batchFinished();
+            toCluster = m_ReplaceMissingFilter.output();
+        } else {
+            toCluster = instance;
+        }
+
+        return clusterFilteredInstance(toCluster, false);
+    }
+
+    private int clusterFilteredInstance(Instance instance, boolean updateErrors) throws Exception {
         double minDist = m_distanceFunction.distance(instance, m_clusterCenters.instance(0));
         int retValue = 0;
 
@@ -161,6 +179,14 @@ extends RandomizableClusterer
                 minDist = dist;
                 retValue = i;
             }
+        }
+
+        if (updateErrors) {
+            if(m_distanceFunction instanceof EuclideanDistance){
+                //Euclidean distance to Squared Euclidean distance
+                minDist *= minDist;
+            }
+            m_clusterErrors[retValue] += minDist;
         }
 
         return retValue;
@@ -345,10 +371,9 @@ extends RandomizableClusterer
 
     public void setDistanceFunction(DistanceFunction df) throws Exception {
         if(!(df instanceof EuclideanDistance) &&
-           !(df instanceof ManhattanDistance) &&
-           !(df instanceof KPrototypes_DistanceFunction))
+           !(df instanceof ManhattanDistance))
         {
-            throw new Exception("SimpleKMeans currently only supports the Euclidean, Manhattan and KPrototypes distances.");
+            throw new Exception("SimpleKMeans currently only supports the Euclidean and Manhattan distances.");
         }
         m_distanceFunction = df;
     }
