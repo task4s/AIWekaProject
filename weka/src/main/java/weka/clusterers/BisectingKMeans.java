@@ -218,7 +218,14 @@ public class BisectingKMeans
   public void buildClusterer(Instances data) throws Exception {
     getCapabilities().testWithFail(data);
 
+    m_ReplaceMissingFilter = new ReplaceMissingValues();
     Instances instances = new Instances(data);
+
+    instances.setClassIndex(-1);
+    if (!m_dontReplaceMissing) {
+      m_ReplaceMissingFilter.setInputFormat(instances);
+      instances = Filter.useFilter(instances, m_ReplaceMissingFilter);
+    }
 
     // all the instances are assigned to cluster 0
     m_Assignments = new int [instances.numInstances()];
@@ -269,8 +276,12 @@ public class BisectingKMeans
               second.add(nextInstance);
             }
           }
-          firstCentroid = kMeans.getClusterCentroids().instance(0);
-          secondCentroid = kMeans.getClusterCentroids().instance(l);
+          // FIXME: There should be a better way to get the two centroids.
+          Instances centroids = kMeans.getClusterCentroids();
+          firstCentroid = centroids.instance(0);
+          centroids.delete(0);
+          secondCentroid = centroids.instance(0);
+
           firstError = kMeans.getClusterErrors()[0];
           secondError = kMeans.getClusterErrors()[1];
           minimumError = currentError;
@@ -312,8 +323,23 @@ public class BisectingKMeans
    * @return a cluster number
    */
   private int clusterProcessedInstance(Instance instance, boolean updateErrors) {
-  // TODO: write this!
-        return 0;
+    double minDist = Integer.MAX_VALUE;
+    int bestCluster = 0;
+    for (int i = 0; i < m_NumClusters; i++) {
+      double dist = m_DistanceFunction.distance(instance, m_ClusterCentroids[i]);
+      if (dist < minDist) {
+	minDist = dist;
+	bestCluster = i;
+      }
+    }
+    if (updateErrors) {
+      if(m_DistanceFunction instanceof EuclideanDistance){
+        //Euclidean distance to Squared Euclidean distance
+        minDist *= minDist;
+      }
+      m_ClusterErrors[bestCluster] += minDist;
+    }
+    return bestCluster;
   }
 
   /**
@@ -325,6 +351,7 @@ public class BisectingKMeans
    * @throws Exception if instance could not be classified
    * successfully
    */
+  @Override
   public int clusterInstance(Instance instance) throws Exception {
     Instance inst = null;
     if (!m_dontReplaceMissing) {
@@ -799,16 +826,32 @@ public class BisectingKMeans
   public String toString()
   {
         String resultString = new String();
-        resultString = resultString.concat(" Number of clusters: ");
+        resultString = resultString.concat("Number of clusters: ");
         resultString = resultString.concat(m_NumClusters + "\n");
+        resultString = resultString.concat("Number of executions of the subalgorithm: ");
+        resultString = resultString.concat(m_NumExecutions + "\n");
+        resultString = resultString.concat("Max iterations of the subalgorithm: ");
+        resultString = resultString.concat(m_MaxIterations + "\n");
+        resultString = resultString.concat("\n Cluster centroids:\n");
+        for (int i = 0; i < m_NumClusters; ++i){
+            resultString = resultString.concat("Cluster " + i + " centroid: ");
+            resultString = resultString.concat(m_ClusterCentroids[i].toString() + "\n");
+        }
+        resultString = resultString.concat("\nCluster errors:\n");
+        for (int i = 0; i < m_NumClusters; ++i){
+            resultString = resultString.concat("Cluster " + i + " error: ");
+            resultString = resultString.concat(m_ClusterErrors[i] + "\n");
+        }
+        resultString = resultString.concat("\n");
         for (int i = 0; i < m_NumClusters; i++){
-            resultString = resultString.concat("Cluster # " + i + " contains the following instances: \n");
+            resultString = resultString.concat("Cluster " + i + " contains the following instances: \n");
             for( int j = 0; j< m_Clusters.get(i).numInstances(); j++){
                 resultString = resultString.concat(m_Clusters.get(i).instance(j).toString());
                 resultString = resultString.concat("\n");
             }
             resultString = resultString.concat("=======================================\n");
         }
+        resultString = resultString.concat("\n");
         return resultString;
   }
 

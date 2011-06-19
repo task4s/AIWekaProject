@@ -270,7 +270,7 @@ public class SimpleKMeans
     if(m_PreserveOrder)
       m_Assignments = clusterAssignments;
 		
-
+    m_DistanceFunction.setInstances(instances);
     
     Random RandomO = new Random(getSeed());
     int instIndex;
