@@ -49,34 +49,6 @@ public class BisectingKMeans
   private int m_NumClusters = 2;
 
   /**
-   * Holds the standard deviations of the numeric attributes in each cluster
-   */
-  private Instances m_ClusterStdDevs;
-
-  /**
-   * For each cluster, holds the frequency counts for the values of each
-   * nominal attribute
-   */
-  private int [][][] m_ClusterNominalCounts;
-  private int[][] m_ClusterMissingCounts;
-
-  /**
-   * Stats on the full data set for comparison purposes
-   * In case the attribute is numeric the value is the mean if is
-   * being used the Euclidian distance or the median if Manhattan distance
-   * and if the attribute is nominal then it's mode is saved
-   */
-  private double[] m_FullMeansOrMediansOrModes;
-  private double[] m_FullStdDevs;
-  private int[][] m_FullNominalCounts;
-  private int[] m_FullMissingCounts;
-
-  /**
-   * Display standard deviations for numeric atts
-   */
-  private boolean m_displayStdDevs;
-
-  /**
    * Replace missing values globally?
    */
   private boolean m_dontReplaceMissing = false;
@@ -98,11 +70,6 @@ public class BisectingKMeans
 
   /** the distance function used. */
   protected DistanceFunction m_DistanceFunction = new EuclideanDistance();
-
-  /**
-   * Preserve order of instances
-   */
-  private boolean m_PreserveOrder = false;
 
   /**
    * Assignments obtained
@@ -252,12 +219,12 @@ public class BisectingKMeans
       for (int l = 0; l < m_NumExecutions; l++){
         // create and configure the K-Means subalgorithm
         weka.clusterers.SimpleKMeans kMeans = new weka.clusterers.SimpleKMeans();
-        kMeans.setDisplayStdDevs(m_displayStdDevs);
+        kMeans.setDisplayStdDevs(false);
         kMeans.setDistanceFunction(m_DistanceFunction);
         kMeans.setDontReplaceMissingValues(m_dontReplaceMissing);
         kMeans.setMaxIterations(m_MaxIterations);
         kMeans.setNumClusters(2);   // always split into two subclusters
-        kMeans.setPreserveInstancesOrder(m_PreserveOrder);
+        kMeans.setPreserveInstancesOrder(false);    // no need for that
         kMeans.setSeed(RandomO.nextInt());
         kMeans.buildClusterer(clusterToSplit);
 
@@ -463,38 +430,6 @@ public class BisectingKMeans
    * @return tip text for this property suitable for
    * displaying in the explorer/experimenter gui
    */
-  public String displayStdDevsTipText() {
-    return "Display std deviations of numeric attributes "
-      + "and counts of nominal attributes.";
-  }
-
-  /**
-   * Sets whether standard deviations and nominal count
-   * Should be displayed in the clustering output
-   *
-   * @param stdD true if std. devs and counts should be
-   * displayed
-   */
-  public void setDisplayStdDevs(boolean stdD) {
-    m_displayStdDevs = stdD;
-  }
-
-  /**
-   * Gets whether standard deviations and nominal count
-   * Should be displayed in the clustering output
-   *
-   * @return true if std. devs and counts should be
-   * displayed
-   */
-  public boolean getDisplayStdDevs() {
-    return m_displayStdDevs;
-  }
-
-  /**
-   * Returns the tip text for this property
-   * @return tip text for this property suitable for
-   * displaying in the explorer/experimenter gui
-   */
   public String dontReplaceMissingValuesTipText() {
     return "Replace missing values globally with mean/mode.";
   }
@@ -560,35 +495,6 @@ public class BisectingKMeans
    * @return tip text for this property suitable for
    * displaying in the explorer/experimenter gui
    */
-  public String preserveInstancesOrderTipText() {
-    return "Preserve order of instances.";
-  }
-
-  /**
-   * Sets whether order of instances must be preserved
-   *
-   * @param r true if missing values are to be
-   * replaced
-   */
-  public void setPreserveInstancesOrder(boolean r) {
-    m_PreserveOrder = r;
-  }
-
-  /**
-   * Gets whether order of instances must be preserved
-   *
-   * @return true if missing values are to be
-   * replaced
-   */
-  public boolean getPreserveInstancesOrder() {
-    return m_PreserveOrder;
-  }
-
-  /**
-   * Returns the tip text for this property
-   * @return tip text for this property suitable for
-   * displaying in the explorer/experimenter gui
-   */
   public String wayToChooseClusterToSplitTipText() {
     return "Way to choose the cluster to split:" +
            " 1 = Random;" +
@@ -639,9 +545,6 @@ public class BisectingKMeans
                                  + "\t(default 2).",
                                  "N", 1, "-N <num>"));
     result.addElement(new Option(
-                                 "\tDisplay std. deviations for centroids.\n",
-                                 "V", 0, "-V"));
-    result.addElement(new Option(
                                  "\tReplace missing values with mean/mode.\n",
                                  "M", 0, "-M"));
 
@@ -653,10 +556,6 @@ public class BisectingKMeans
     result.add(new Option(
                           "\tMaximum number of iterations.\n",
                           "I",1,"-I <num>"));
-
-    result.addElement(new Option(
-                                 "\tPreserve order of instances.\n",
-                                 "O", 0, "-O"));
 
     result.addElement(new Option(
                                  "\tNumber of executions of the K-means subalgorithm.\n",
@@ -725,7 +624,6 @@ public class BisectingKMeans
   public void setOptions (String[] options)
     throws Exception {
 
-    m_displayStdDevs = Utils.getFlag("V", options);
     m_dontReplaceMissing = Utils.getFlag("M", options);
 
     String optionString = Utils.getOption('N', options);
@@ -766,8 +664,6 @@ public class BisectingKMeans
       setDistanceFunction(new EuclideanDistance());
     }
 
-    m_PreserveOrder = Utils.getFlag("O", options);
-
     super.setOptions(options);
   }
 
@@ -782,10 +678,6 @@ public class BisectingKMeans
     String[]  	options;
 
     result = new Vector();
-
-    if (m_displayStdDevs) {
-      result.add("-V");
-    }
 
     if (m_dontReplaceMissing) {
       result.add("-M");
@@ -806,10 +698,6 @@ public class BisectingKMeans
 
     result.add("-В");
     result.add(""+ getWayToChooseClusterToSplit());
-
-    if(m_PreserveOrder){
-      result.add("-O");
-    }
 
     options = super.getOptions();
     for (i = 0; i < options.length; i++)
@@ -874,26 +762,6 @@ public class BisectingKMeans
   }
 
   /**
-   * Gets the standard deviations of the numeric attributes in each cluster
-   *
-   * @return		the standard deviations of the numeric attributes
-   * 			in each cluster
-   */
-  public Instances getClusterStandardDevs() {
-    return m_ClusterStdDevs;
-  }
-
-  /**
-   * Returns for each cluster the frequency counts for the values of each
-   * nominal attribute
-   *
-   * @return		the counts
-   */
-  public int [][][] getClusterNominalCounts() {
-    return m_ClusterNominalCounts;
-  }
-
-  /**
    * Gets the error for all clusters
    *
    * @return		the error
@@ -917,9 +785,6 @@ public class BisectingKMeans
    * @throws Exception if order of instances wasn't preserved or no assignments were made
    */
   public int [] getAssignments() throws Exception{
-    if(!m_PreserveOrder){
-      throw new Exception("The assignments are only available when order of instances is preserved (-O)");
-    }
     if(m_Assignments == null){
       throw new Exception("No assignments made.");
     }
