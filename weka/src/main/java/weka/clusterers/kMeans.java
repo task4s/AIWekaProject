@@ -389,6 +389,20 @@ extends RandomizableClusterer
     public boolean getDontReplaceMissingValues() {
         return m_dontReplaceMissing;
     }
+
+    //Interface for BisectingKMeans class
+    public double[] getClusterErrors() {
+        return m_clusterErrors;
+    }
+
+    public Instances getClusterCentroids() {
+        return m_clusterCenters;
+    }
+
+    public double getSquaredError() {
+        return Utils.sum(m_clusterErrors);
+    }
+    //end Interface for BisectingKMeans class
     //end HelperFunctions
 
     //GUI

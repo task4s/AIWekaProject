@@ -218,13 +218,13 @@ public class BisectingKMeans
       double firstError = 0, secondError = 0;
       for (int l = 0; l < m_NumExecutions; l++){
         // create and configure the K-Means subalgorithm
-        weka.clusterers.SimpleKMeans kMeans = new weka.clusterers.SimpleKMeans();
-        kMeans.setDisplayStdDevs(false);
+        weka.clusterers.kMeans kMeans = new weka.clusterers.kMeans();
+        //kMeans.setDisplayStdDevs(false);
         kMeans.setDistanceFunction(m_DistanceFunction);
         kMeans.setDontReplaceMissingValues(m_dontReplaceMissing);
         kMeans.setMaxIterations(m_MaxIterations);
         kMeans.setNumClusters(2);   // always split into two subclusters
-        kMeans.setPreserveInstancesOrder(false);    // no need for that
+        //kMeans.setPreserveInstancesOrder(false);    // no need for that
         kMeans.setSeed(RandomO.nextInt());
         kMeans.buildClusterer(clusterToSplit);
 
