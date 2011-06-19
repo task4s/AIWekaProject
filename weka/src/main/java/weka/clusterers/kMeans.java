@@ -194,6 +194,11 @@ extends RandomizableClusterer
                                  + "\t(default 2).",
                                  "N", 1, "-N <num>"));
         result.add(new Option(
+                          "\tDistance function to use.\n"
+                          + "\t(default: weka.core.EuclideanDistance)",
+                          "A", 1,"-A <classname and options>"));
+
+        result.add(new Option(
                             "\tMaximum number of iterations.\n",
                             "I",1,"-I <num>"));
 
@@ -222,22 +227,22 @@ extends RandomizableClusterer
               setMaxIterations(50);
         }
 
-        //String distFunctionClass = Utils.getOption('A', options);
-        //if(distFunctionClass.length() != 0) {
-        //  String distFunctionClassSpec[] = Utils.splitOptions(distFunctionClass);
-        //  if(distFunctionClassSpec.length == 0) {
-        //    throw new Exception("Invalid DistanceFunction specification string.");
-        //  }
-        //  String className = distFunctionClassSpec[0];
-        //  distFunctionClassSpec[0] = "";
+        String distFunctionClass = Utils.getOption('A', options);
+        if(distFunctionClass.length() != 0) {
+          String distFunctionClassSpec[] = Utils.splitOptions(distFunctionClass);
+          if(distFunctionClassSpec.length == 0) {
+            throw new Exception("Invalid DistanceFunction specification string.");
+          }
+          String className = distFunctionClassSpec[0];
+          distFunctionClassSpec[0] = "";
 
-        //  setDistanceFunction( (DistanceFunction)
-        //                       Utils.forName( DistanceFunction.class,
-        //                                      className, distFunctionClassSpec) );
-        //}
-        //else {
-        //  setDistanceFunction(new EuclideanDistance());
-        //}
+          setDistanceFunction( (DistanceFunction)
+                               Utils.forName( DistanceFunction.class,
+                                              className, distFunctionClassSpec) );
+        }
+        else {
+          setDistanceFunction(new EuclideanDistance());
+        }
 
         super.setOptions(options);
     }
@@ -254,9 +259,9 @@ extends RandomizableClusterer
         result.add("-N");
         result.add(""+ numberOfClusters());
 
-        //result.add("-A");
-        //result.add((m_DistanceFunction.getClass().getName() + " " +
-        //        Utils.joinOptions(m_DistanceFunction.getOptions())).trim());
+        result.add("-A");
+        result.add((m_distanceFunction.getClass().getName() + " " +
+                Utils.joinOptions(m_distanceFunction.getOptions())).trim());
 
         result.add("-I");
         result.add(""+ getMaxIterations());
@@ -336,6 +341,28 @@ extends RandomizableClusterer
         }
 
         return vals;
+    }
+
+    public void setDistanceFunction(DistanceFunction df) throws Exception {
+        if(!(df instanceof EuclideanDistance) &&
+           !(df instanceof ManhattanDistance) &&
+           !(df instanceof KPrototypes_DistanceFunction))
+        {
+            throw new Exception("SimpleKMeans currently only supports the Euclidean, Manhattan and KPrototypes distances.");
+        }
+        m_distanceFunction = df;
+    }
+
+    public DistanceFunction getDistanceFunction() {
+        return m_distanceFunction;
+    }
+
+    public void setDontReplaceMissingValues(boolean value) {
+        m_dontReplaceMissing = value;
+    }
+
+    public boolean getDontReplaceMissingValues() {
+        return m_dontReplaceMissing;
     }
     //end HelperFunctions
 
