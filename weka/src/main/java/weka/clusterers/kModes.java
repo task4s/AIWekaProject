@@ -43,6 +43,7 @@ extends RandomizableClusterer
     private int[] m_previousAssignment;
     private boolean m_dontReplaceMissing = false;
     private ReplaceMissingValues m_ReplaceMissingFilter;
+    private double[] m_clusterErrors;
     //end of Private Members
 
     //Constructors
@@ -59,6 +60,11 @@ extends RandomizableClusterer
         getCapabilities().testWithFail(data);
 
         Random rand = new Random(getSeed());
+
+        int spaceCount = getMaxUniqueInstances(data);
+        if(spaceCount < m_numClusters || data.numInstances() < m_numClusters) {
+            m_numClusters = data.numInstances();
+        }
 
         m_clusterCenters = new Instances(data, m_numClusters);
 
@@ -96,6 +102,7 @@ extends RandomizableClusterer
         m_clusterDistribution = new Instances[m_numClusters];
         m_previousAssignment = new int[count+1];
         int emptyClustCount = 0;
+        m_clusterErrors = new double[m_numClusters];
 
         while(!finished) {
             finished = true;
@@ -103,9 +110,7 @@ extends RandomizableClusterer
 
             for(int i = 0; i < inst.numInstances(); i++) {
                 Instance next = inst.instance(i);
-                if (next == null)
-                    continue;
-                int newClust = clusterInstance(next);
+                int newClust = clusterFilteredInstance(next, true);
                 if(newClust != m_previousAssignment[i]) {
                     m_previousAssignment[i] = newClust;
                     finished = false;
@@ -136,8 +141,6 @@ extends RandomizableClusterer
                     int index = 0;
 
                     for (int k = 0; k < m_clusterDistribution.length; k++) {
-                        if (m_clusterDistribution[k] == null)
-                            continue;
                         if (m_clusterDistribution[k].numInstances() > 0) {
                             newClusterDistribution[index++] = m_clusterDistribution[k];
                         }
@@ -149,23 +152,46 @@ extends RandomizableClusterer
                 }
             }
 
+            if(!finished) {
+                m_clusterErrors = new double[m_numClusters];
+            }
+
             if(m_currentIteration == m_maxIterations)
                 finished = true;
         }
     }
 
     public int clusterInstance(Instance instance) throws Exception {
+        Instance toCluster = null;
+        if (!m_dontReplaceMissing) {
+            m_ReplaceMissingFilter.input(instance);
+            m_ReplaceMissingFilter.batchFinished();
+            toCluster = m_ReplaceMissingFilter.output();
+        } else {
+            toCluster = instance;
+        }
+
+        return clusterFilteredInstance(toCluster, false);
+    }
+
+    private int clusterFilteredInstance(Instance instance, boolean updateErrors) throws Exception {
         double minDist = m_distanceFunction.distance(instance, m_clusterCenters.instance(0));
         int retValue = 0;
 
         for (int i = 1; i < m_numClusters; i++) {
-            if (m_clusterCenters.instance(i) == null)
-                continue;
             double dist = m_distanceFunction.distance(instance, m_clusterCenters.instance(i));
             if (dist < minDist) {
                 minDist = dist;
                 retValue = i;
             }
+        }
+
+        if (updateErrors) {
+            if(m_distanceFunction instanceof EuclideanDistance){
+                //Euclidean distance to Squared Euclidean distance
+                minDist *= minDist;
+            }
+            m_clusterErrors[retValue] += minDist;
         }
 
         return retValue;
@@ -198,6 +224,7 @@ extends RandomizableClusterer
                                  "\tNumber of clusters.\n"
                                  + "\t(default 2).",
                                  "N", 1, "-N <num>"));
+
         result.add(new Option(
                             "\tMaximum number of iterations.\n",
                             "I",1,"-I <num>"));
@@ -227,23 +254,6 @@ extends RandomizableClusterer
               setMaxIterations(50);
         }
 
-        //String distFunctionClass = Utils.getOption('A', options);
-        //if(distFunctionClass.length() != 0) {
-        //  String distFunctionClassSpec[] = Utils.splitOptions(distFunctionClass);
-        //  if(distFunctionClassSpec.length == 0) {
-        //    throw new Exception("Invalid DistanceFunction specification string.");
-        //  }
-        //  String className = distFunctionClassSpec[0];
-        //  distFunctionClassSpec[0] = "";
-
-        //  setDistanceFunction( (DistanceFunction)
-        //                       Utils.forName( DistanceFunction.class,
-        //                                      className, distFunctionClassSpec) );
-        //}
-        //else {
-        //  setDistanceFunction(new EuclideanDistance());
-        //}
-
         super.setOptions(options);
     }
 
@@ -258,10 +268,6 @@ extends RandomizableClusterer
 
         result.add("-N");
         result.add(""+ numberOfClusters());
-
-        //result.add("-A");
-        //result.add((m_DistanceFunction.getClass().getName() + " " +
-        //        Utils.joinOptions(m_DistanceFunction.getOptions())).trim());
 
         result.add("-I");
         result.add(""+ getMaxIterations());
@@ -282,8 +288,10 @@ extends RandomizableClusterer
         //class
         result.enable(Capability.NO_CLASS);
         result.enable(Capability.NOMINAL_CLASS);
+        result.enable(Capability.NUMERIC_CLASS);
 
         // attributes
+        result.enable(Capability.NUMERIC_ATTRIBUTES);
         result.enable(Capability.NOMINAL_ATTRIBUTES);
         result.enable(Capability.MISSING_VALUES);
 
@@ -342,16 +350,53 @@ extends RandomizableClusterer
 
         return vals;
     }
+
+    public void setDontReplaceMissingValues(boolean value) {
+        m_dontReplaceMissing = value;
+    }
+
+    public boolean getDontReplaceMissingValues() {
+        return m_dontReplaceMissing;
+    }
+
+    private int getMaxUniqueInstances(Instances data) {
+        int retValue = 1;
+        for(int i = 0; i < data.numAttributes(); i++) {
+            weka.core.AttributeStats stats = data.attributeStats(i);
+            retValue *= stats.distinctCount;
+        }
+
+        return retValue;
+    }
     //end HelperFunctions
 
     //GUI
     public String toString() {
-        return "Finished";
+          String resultString = new String();
+        resultString = resultString.concat("Number of clusters: ");
+        resultString = resultString.concat(m_numClusters + "\n");
+        resultString = resultString.concat("\n Cluster centroids:\n");
+        for (int i = 0; i < m_numClusters; ++i){
+            resultString = resultString.concat("Cluster " + i + " centroid: ");
+            resultString = resultString.concat(m_clusterCenters.instance(i).toString() + "\n");
+        }
+
+        resultString = resultString.concat("\n");
+        for (int i = 0; i < m_numClusters; i++){
+            resultString = resultString.concat("Cluster " + i + " contains the following instances: \n");
+            for( int j = 0; j< m_clusterDistribution[i].numInstances(); j++){
+                resultString = resultString.concat(m_clusterDistribution[i].instance(j).toString());
+                resultString = resultString.concat("\n");
+            }
+            resultString = resultString.concat("=======================================\n");
+        }
+        resultString = resultString.concat("\n");
+        return resultString;
     }
 
     //GUI Info
     public String globalInfo() {
-        return "Basic kModes algorithm for clustering data, containing numeric only values.";
+        return "Basic kModes algorithm for clustering data, containing nominal only values.";
     }
 
     public String numClustersTipText() {
@@ -369,6 +414,6 @@ extends RandomizableClusterer
     //end GUI
 
     public static void main (String[] argv) {
-        runClusterer(new kModes(), argv);
+        runClusterer(new kMeans(), argv);
     }
 }
