@@ -12,7 +12,6 @@ import weka.core.CapabilitiesHandler;
 import weka.core.Capabilities.Capability;
 import weka.core.DistanceFunction;
 import weka.core.EuclideanDistance;
-import weka.core.ManhattanDistance;
 import weka.core.Instance;
 import weka.core.Instances;
 
@@ -315,37 +314,8 @@ extends RandomizableClusterer
     private double[] recalcCenters(Instances members) throws Exception {
         double [] vals = new double[members.numAttributes()];
 
-        //used only for Manhattan Distance
-        Instances sortedMembers = null;
-        int middle = 0;
-        boolean dataIsEven = false;
-
-        if(m_distanceFunction instanceof ManhattanDistance){
-            middle = (members.numInstances()-1)/2;
-            dataIsEven = ((members.numInstances()%2)==0);
-            sortedMembers = new Instances(members);
-
-        }
-
         for (int j = 0; j < members.numAttributes(); j++) {
-
-            //in case of Euclidian distance the centroid is the mean point
-            //in case of Manhattan distance the centroid is the median point
-            //in both cases, if the attribute is nominal, the centroid is the mode
-            if(m_distanceFunction instanceof EuclideanDistance) {
-                vals[j] = members.meanOrMode(j);
-            } else if(m_distanceFunction instanceof ManhattanDistance) {
-                if(members.numInstances() == 1) {
-                    vals[j] = members.instance(0).value(j);
-                } else {
-                    sortedMembers.kthSmallestValue(j, middle+1);
-                    vals[j] = sortedMembers.instance(middle).value(j);
-                    if( dataIsEven ) {
-                        sortedMembers.kthSmallestValue(j, middle+2);
-                        vals[j] = (vals[j]+sortedMembers.instance(middle+1).value(j))/2;
-                    }
-                }
-            }
+            vals[j] = members.meanOrMode(j);
         }
 
         return vals;
