@@ -725,9 +725,9 @@ public class BisectingKMeans
             resultString = resultString.concat("Cluster " + i + " centroid: ");
             resultString = resultString.concat(m_ClusterCentroids[i].toString() + "\n");
         }
-        resultString = resultString.concat("\nCluster errors:\n");
+        resultString = resultString.concat("\nCluster average squared-errors:\n");
         for (int i = 0; i < m_NumClusters; ++i){
-            resultString = resultString.concat("Cluster " + i + " error: ");
+            resultString = resultString.concat("Cluster " + i + " average squared-error: ");
             resultString = resultString.concat(m_ClusterErrors[i] + "\n");
         }
         resultString = resultString.concat("\n");

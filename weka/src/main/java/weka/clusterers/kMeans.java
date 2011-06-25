@@ -154,6 +154,11 @@ extends RandomizableClusterer
             if(m_currentIteration == m_maxIterations)
                 finished = true;
         }
+
+        // Substitue the sum of the squared errors with the average squared error.
+        for(int f =0; f < m_clusterErrors.length; f++) {
+            m_clusterErrors[f] /= m_clusterDistribution[f].numInstances();
+        }
     }
     
     public int clusterInstance(Instance instance) throws Exception {
@@ -415,7 +420,13 @@ extends RandomizableClusterer
             resultString = resultString.concat("Cluster " + i + " centroid: ");
             resultString = resultString.concat(m_clusterCenters.instance(i).toString() + "\n");
         }
-      
+
+        resultString = resultString.concat("\nCluster average squared-errors:\n");
+        for (int r = 0; r < m_numClusters; ++r){
+            resultString = resultString.concat("Cluster " + r + " average squared-error: ");
+            resultString = resultString.concat(m_clusterErrors[r] + "\n");
+        }
+
         resultString = resultString.concat("\n");
         for (int i = 0; i < m_numClusters; i++){
             resultString = resultString.concat("Cluster " + i + " contains the following instances: \n");

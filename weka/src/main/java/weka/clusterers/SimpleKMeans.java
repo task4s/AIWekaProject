@@ -383,6 +383,11 @@ public class SimpleKMeans
       }
       m_ClusterSizes[i] = tempI[i].numInstances();
     }
+
+    // Substitue the sum of the squared errors with the average squared error.
+    for(int f =0; f < m_squaredErrors.length; f++) {
+        m_squaredErrors[f] /= m_ClusterSizes[f];
+    }
   }
 
   /**
