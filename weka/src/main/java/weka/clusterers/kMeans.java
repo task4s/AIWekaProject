@@ -427,15 +427,18 @@ extends RandomizableClusterer
             resultString = resultString.concat(m_clusterErrors[r] + "\n");
         }
 
-        resultString = resultString.concat("\n");
-        for (int i = 0; i < m_numClusters; i++){
-            resultString = resultString.concat("Cluster " + i + " contains the following instances: \n");
-            for( int j = 0; j< m_clusterDistribution[i].numInstances(); j++){
-                resultString = resultString.concat(m_clusterDistribution[i].instance(j).toString());
-                resultString = resultString.concat("\n");
-            }
-            resultString = resultString.concat("=======================================\n");
-        }
+        resultString = resultString.concat("Sum of the clusters average squared errors: " + Utils.sum(m_clusterErrors));
+
+//        resultString = resultStringd.concat("\n");
+//        for (int i = 0; i < m_numClusters; i++){
+//            resultString = resultString.concat("Cluster " + i + " contains the following instances: \n");
+//            for( int j = 0; j< m_clusterDistribution[i].numInstances(); j++){
+//                resultString = resultString.concat(m_clusterDistribution[i].instance(j).toString());
+//                resultString = resultString.concat("\n");
+//            }
+//            resultString = resultString.concat("=======================================\n");
+//        }
+
         resultString = resultString.concat("\n");
         return resultString;
     }

@@ -218,8 +218,9 @@ public class BisectingKMeans
       double firstError = 0, secondError = 0;
       for (int l = 0; l < m_NumExecutions; l++){
         // create and configure the K-Means subalgorithm
-        weka.clusterers.kMeans kMeans = new weka.clusterers.kMeans();
-        //kMeans.setDisplayStdDevs(false);
+        //weka.clusterers.kMeans kMeans = new weka.clusterers.kMeans();
+        weka.clusterers.SimpleKMeans kMeans = new weka.clusterers.SimpleKMeans();
+        kMeans.setDisplayStdDevs(false);
         kMeans.setDistanceFunction(m_DistanceFunction);
         kMeans.setDontReplaceMissingValues(m_dontReplaceMissing);
         kMeans.setMaxIterations(m_MaxIterations);
@@ -725,20 +726,25 @@ public class BisectingKMeans
             resultString = resultString.concat("Cluster " + i + " centroid: ");
             resultString = resultString.concat(m_ClusterCentroids[i].toString() + "\n");
         }
+
         resultString = resultString.concat("\nCluster average squared-errors:\n");
         for (int i = 0; i < m_NumClusters; ++i){
             resultString = resultString.concat("Cluster " + i + " average squared-error: ");
             resultString = resultString.concat(m_ClusterErrors[i] + "\n");
         }
         resultString = resultString.concat("\n");
-        for (int i = 0; i < m_NumClusters; i++){
-            resultString = resultString.concat("Cluster " + i + " contains the following instances: \n");
-            for( int j = 0; j< m_Clusters.get(i).numInstances(); j++){
-                resultString = resultString.concat(m_Clusters.get(i).instance(j).toString());
-                resultString = resultString.concat("\n");
-            }
-            resultString = resultString.concat("=======================================\n");
-        }
+
+        resultString = resultString.concat("Sum of the clusters average squared errors: " + Utils.sum(m_ClusterErrors));
+
+//        for (int i = 0; i < m_NumClusters; i++){
+//            resultString = resultString.concat("Cluster " + i + " contains the following instances: \n");
+//            for( int j = 0; j< m_Clusters.get(i).numInstances(); j++){
+//                resultString = resultString.concat(m_Clusters.get(i).instance(j).toString());
+//                resultString = resultString.concat("\n");
+//            }
+//            resultString = resultString.concat("=======================================\n");
+//        }
+
         resultString = resultString.concat("\n");
         return resultString;
   }
