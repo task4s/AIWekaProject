@@ -113,6 +113,7 @@ extends RandomizableClusterer
             }
 
             if(!finished) {
+                m_clusterCenters = new Instances(inst, m_numClusters);
                 for (int i = 0; i < m_numClusters; i++) {
                     m_clusterDistribution[i] = new Instances(inst, 0);
                 }
@@ -351,10 +352,6 @@ extends RandomizableClusterer
         }
 
         for (int j = 0; j < members.numAttributes(); j++) {
-
-            //in case of Euclidian distance the centroid is the mean point
-            //in case of Manhattan distance the centroid is the median point
-            //in both cases, if the attribute is nominal, the centroid is the mode
             if(m_distanceFunction instanceof EuclideanDistance) {
                 vals[j] = members.meanOrMode(j);
             } else if(m_distanceFunction instanceof ManhattanDistance) {
@@ -369,8 +366,12 @@ extends RandomizableClusterer
                     }
                 }
             }
+
+            if(members.attributeStats(j).missingCount == members.numInstances())
+                vals[j] = Instance.missingValue();
         }
 
+        m_clusterCenters.add(new Instance(1.0,vals));
         return vals;
     }
 
