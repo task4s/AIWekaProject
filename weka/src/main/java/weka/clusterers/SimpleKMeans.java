@@ -423,14 +423,14 @@ public class SimpleKMeans
       //in case of Manhattan distance the centroid is the median point
       //in both cases, if the attribute is nominal, the centroid is the mode
       if(m_DistanceFunction instanceof EuclideanDistance ||
-         members.attribute(j).isNominal())
-        {													
+         m_DistanceFunction instanceof KPrototypes_DistanceFunction ||
+         members.attribute(j).isNominal()) {
           vals[j] = members.meanOrMode(j);
-        }else if(m_DistanceFunction instanceof ManhattanDistance){
+      } else if(m_DistanceFunction instanceof ManhattanDistance) {
         //singleton special case
-        if(members.numInstances() == 1){
+        if(members.numInstances() == 1) {
           vals[j] = members.instance(0).value(j);
-        }else{
+        } else {
           sortedMembers.kthSmallestValue(j, middle+1);
           vals[j] = sortedMembers.instance(middle).value(j);
           if( dataIsEven ){						
