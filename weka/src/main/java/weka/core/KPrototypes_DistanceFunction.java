@@ -63,7 +63,7 @@ public class KPrototypes_DistanceFunction extends NormalizableDistance
      
       for(int i = 0; i < first.numAttributes(); i++){
         if(first.attribute(i).isNominal()){
-            if(first.attribute(i).equals(second.attribute(i)) )
+            if(!first.attribute(i).equals(second.attribute(i)) )
                 sum_nominal+=1.0;
         }else
         if (first.attribute(i).isNumeric()){
