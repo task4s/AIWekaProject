@@ -71,7 +71,7 @@ public class KPrototypes_DistanceFunction extends NormalizableDistance
         }
       }
      
-      return sum_continuous + m_Gamma * sum_nominal;
+      return Math.sqrt(sum_continuous) + m_Gamma * sum_nominal;
   }
 
   /**
