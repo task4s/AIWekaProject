@@ -722,14 +722,14 @@ public class BisectingKMeans
             resultString = resultString.concat(m_ClusterCentroids[i].toString() + "\n");
         }
 
-        resultString = resultString.concat("\nCluster average squared-errors:\n");
+        resultString = resultString.concat("\nCluster average squared errors:\n");
         for (int i = 0; i < m_NumClusters; ++i){
-            resultString = resultString.concat("Cluster " + i + " average squared-error: ");
+            resultString = resultString.concat("Cluster " + i + " average squared error: ");
             resultString = resultString.concat(m_ClusterErrors[i] + "\n");
         }
         resultString = resultString.concat("\n");
 
-        resultString = resultString.concat("Sum of the clusters average squared errors: " + Utils.sum(m_ClusterErrors));
+        resultString = resultString.concat("\nSum of the clusters average squared errors: " + Utils.sum(m_ClusterErrors) + "\n");
 
 //        for (int i = 0; i < m_NumClusters; i++){
 //            resultString = resultString.concat("Cluster " + i + " contains the following instances: \n");
