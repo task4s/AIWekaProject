@@ -117,6 +117,7 @@ extends RandomizableClusterer
             }
 
             if(!finished) {
+                m_clusterCenters = new Instances(inst, m_numClusters);
                 for (int i = 0; i < m_numClusters; i++) {
                     m_clusterDistribution[i] = new Instances(inst, 0);
                 }
@@ -319,8 +320,13 @@ extends RandomizableClusterer
 
         for (int j = 0; j < members.numAttributes(); j++) {
             vals[j] = members.meanOrMode(j);
+
+            if (members.attributeStats(j).missingCount >
+                    members.attributeStats(j).nominalCounts[Utils.maxIndex(members.attributeStats(j).nominalCounts)])
+                vals[j] = Instance.missingValue();
         }
 
+        m_clusterCenters.add(new Instance(1.0,vals));
         return vals;
     }
 
