@@ -99,7 +99,7 @@ public class BisectingKMeans
   /**
    * The possible ways to choose the cluster to split
    */
-  private int m_wayToChooseClusterToSplit = 3;
+  private int m_wayToChooseClusterToSplit = 1;
 
   /**
    * the default constructor
@@ -153,9 +153,14 @@ public class BisectingKMeans
   private int chooseClusterToSplit(int seed) throws Exception {
     int clusterIndex = 0;
     switch (m_wayToChooseClusterToSplit){
-      case 1:   // Random
-        Random RandomO = new Random(getSeed());
-        clusterIndex = RandomO.nextInt(m_Clusters.size());
+      case 1:   // With highest error
+        double highest_error = -1;
+        for (int i = 0; i < m_Clusters.size(); ++i){
+          if (highest_error < m_ClusterErrors[i]){
+            highest_error = m_ClusterErrors[i];
+            clusterIndex = i;
+          }
+        }
         break;
       case 2:   // With highest count of instances
         int maxInstances = 0;
@@ -166,17 +171,8 @@ public class BisectingKMeans
           }
         }
         break;
-      case 3:   // With highest error
-        double highest_error = -1;
-        for (int i = 0; i < m_Clusters.size(); ++i){
-          if (highest_error < m_ClusterErrors[i]){
-            highest_error = m_ClusterErrors[i];
-            clusterIndex = i;
-          }
-        }
-        break;
       default:
-        throw new Exception("BisectingKMeans currently only supports 3 ways to choose a cluster to split. Check the tooltip for description");
+        throw new Exception("BisectingKMeans currently only supports 2 ways to choose a cluster to split. Check the tooltip for description");
     }
 
     return clusterIndex;
@@ -498,9 +494,8 @@ public class BisectingKMeans
    */
   public String wayToChooseClusterToSplitTipText() {
     return "Way to choose the cluster to split:" +
-           " 1 = Random;" +
-           " 2 = With highest count of instances;" +
-           " 3 = With highest error";
+           " 1 = With highest average squared error;" +
+           " 2 = With highest count of instances;";
   }
 
   /**
@@ -510,9 +505,9 @@ public class BisectingKMeans
    * look at the tooltip for description
    */
   public void setWayToChooseClusterToSplit(int w) throws Exception {
-    if ((w <= 0) || (w > 3))
+    if ((w <= 0) || (w > 2))
     {
-      throw new Exception("BisectingKMeans currently only supports 3 ways to choose a cluster to split. Check the tooltip for description");
+      throw new Exception("BisectingKMeans currently only supports 2 ways to choose a cluster to split. Check the tooltip for description");
     }
     m_wayToChooseClusterToSplit = w;
   }
