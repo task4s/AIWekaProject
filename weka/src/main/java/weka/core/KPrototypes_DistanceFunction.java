@@ -67,7 +67,7 @@ public class KPrototypes_DistanceFunction extends NormalizableDistance
                 sum_nominal+=1.0;
         }else
         if (first.attribute(i).isNumeric()){
-            sum_continuous += distance(first, second, Double.POSITIVE_INFINITY);
+            sum_continuous +=  distance(first, second, Double.POSITIVE_INFINITY)*distance(first, second, Double.POSITIVE_INFINITY);
         }
       }
      

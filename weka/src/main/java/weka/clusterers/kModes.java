@@ -292,7 +292,7 @@ extends RandomizableClusterer
 
         //class
         result.enable(Capability.NO_CLASS);
-        //result.enable(Capability.NOMINAL_CLASS);
+        result.enable(Capability.NOMINAL_CLASS);
 
         // attributes
         result.enable(Capability.NOMINAL_ATTRIBUTES);
