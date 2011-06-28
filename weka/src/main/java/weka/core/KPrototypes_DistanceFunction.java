@@ -67,11 +67,12 @@ public class KPrototypes_DistanceFunction extends NormalizableDistance
                 sum_nominal+=1.0;
         }else
         if (first.attribute(i).isNumeric()){
-            sum_continuous +=  distance(first, second, Double.POSITIVE_INFINITY)*distance(first, second, Double.POSITIVE_INFINITY);
+            sum_continuous +=  (first.attribute(i).weight() - second.attribute(i).weight())*
+                    (first.attribute(i).weight() - second.attribute(i).weight());
         }
       }
      
-      return Math.sqrt(sum_continuous) + m_Gamma * sum_nominal;
+      return sum_continuous + m_Gamma * sum_nominal;
   }
 
   /**

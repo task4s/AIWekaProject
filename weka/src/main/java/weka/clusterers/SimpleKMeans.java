@@ -386,7 +386,8 @@ public class SimpleKMeans
 
     // Substitue the sum of the squared errors with the average squared error.
     for(int f =0; f < m_squaredErrors.length; f++) {
-        m_squaredErrors[f] /= m_ClusterSizes[f];
+        if (f < m_ClusterSizes.length && m_ClusterSizes[f] > 0)
+            m_squaredErrors[f] /= m_ClusterSizes[f];
     }
   }
 
