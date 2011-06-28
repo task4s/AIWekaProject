@@ -422,13 +422,13 @@ extends RandomizableClusterer
             resultString = resultString.concat(m_clusterCenters.instance(i).toString() + "\n");
         }
 
-        resultString = resultString.concat("\nCluster average squared-errors:\n");
+        resultString = resultString.concat("\nCluster average squared errors:\n");
         for (int r = 0; r < m_numClusters; ++r){
-            resultString = resultString.concat("Cluster " + r + " average squared-error: ");
+            resultString = resultString.concat("Cluster " + r + " average squared error: ");
             resultString = resultString.concat(m_clusterErrors[r] + "\n");
         }
 
-        resultString = resultString.concat("Sum of the clusters average squared errors: " + Utils.sum(m_clusterErrors));
+        resultString = resultString.concat("\nSum of the clusters average squared errors: " + Utils.sum(m_clusterErrors) + "\n");
 
 //        resultString = resultStringd.concat("\n");
 //        for (int i = 0; i < m_numClusters; i++){
