@@ -313,7 +313,7 @@ extends RandomizableClusterer
 
         //class
         result.enable(Capability.NO_CLASS);
-        //result.enable(Capability.NUMERIC_CLASS);
+        result.enable(Capability.NUMERIC_CLASS);
 
         // attributes
         result.enable(Capability.NUMERIC_ATTRIBUTES);
